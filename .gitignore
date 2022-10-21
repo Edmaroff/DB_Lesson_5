@@ -1,0 +1,5 @@
+.idea
+venv/
+test.py
+
+settings.ini
