@@ -3,12 +3,11 @@ import configparser
 
 
 # Удаление таблиц phone и client_info
-def drop_table(connection, cursor):
+def drop_table(cursor):
     cursor.execute('''
         DROP TABLE IF EXISTS phone;
         DROP TABLE IF EXISTS client_info;
     ''')
-    connection.commit()
     return print('Таблицы удалены.')
 
 
@@ -40,7 +39,7 @@ def check_info_by_phone(cursor, phone_number):
 
 
 # 1. Функция, создающая структуру БД (таблицы)
-def create_table(connection, cursor):
+def create_table(cursor):
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS client_info (
         client_id  INTEGER      PRIMARY KEY
@@ -58,7 +57,6 @@ def create_table(connection, cursor):
         client_id    INTEGER     REFERENCES client_info(client_id)
         );
     ''')
-    connection.commit()
     return print('Таблицы client_info и phone созданы.')
 
 
@@ -104,7 +102,7 @@ def add_phone_number(cursor, client_id, phone_number):
 
 
 # 4. Функция, позволяющая изменить данные о клиенте
-def change_client(connection, cursor, client_id, first_name, surname, email, phone_number=None, phone_id=None):
+def change_client(cursor, client_id, first_name, surname, email, phone_number=None, phone_id=None):
     if check_info_by_client_id(cursor, client_id):
         if not check_info_by_email(cursor, email):
             cursor.execute('''
@@ -114,7 +112,6 @@ def change_client(connection, cursor, client_id, first_name, surname, email, pho
                        email = %s
                  WHERE client_id = %s;
             ''', (first_name, surname, email, client_id))
-            connection.commit()
             if phone_number is not None and phone_id is not None:
                 if not check_info_by_phone(cursor, phone_number):
                     cursor.execute('''
@@ -123,7 +120,6 @@ def change_client(connection, cursor, client_id, first_name, surname, email, pho
                          WHERE client_id = %s
                            AND phone_id = %s;
                     ''', (phone_number, client_id, phone_id))
-                    connection.commit()
                     return print('Указанные данные успешно обновлены')
                 else:
                     return print(f'Клиент с номером = {phone_number} уже существует, изменить номер не получится.'
@@ -137,20 +133,19 @@ def change_client(connection, cursor, client_id, first_name, surname, email, pho
 
 
 # 5. Функция, позволяющая удалить телефон для существующего клиента
-def delete_phone_number(connection, cursor, phone_number):
+def delete_phone_number(cursor, phone_number):
     if check_info_by_phone(cursor, phone_number):
         cursor.execute('''
             DELETE FROM phone 
              WHERE phone_number = %s;
         ''', (phone_number,))
-        connection.commit()
         return print('Номер телефона удален.')
     else:
         return print(f'Клиента с номером = {phone_number} нет, удалить номер не получится.')
 
 
 # 6. Функция, позволяющая удалить существующего клиента
-def delete_client(connection, cursor, client_id):
+def delete_client(cursor, client_id):
     if check_info_by_client_id(cursor, client_id):
         cursor.execute('''
             DELETE FROM phone 
@@ -160,7 +155,6 @@ def delete_client(connection, cursor, client_id):
             DELETE FROM client_info 
              WHERE client_id = %s;
         ''', (client_id,))
-        connection.commit()
         return print('Данные о клиенте удалены.')
     else:
         return print(f'Клиента с client_id = {client_id} не существует, удалить данные не получится.')
@@ -205,8 +199,8 @@ if __name__ == '__main__':
     with psycopg2.connect(database=database, user=user, password=password) as conn:
         with conn.cursor() as cur:
             # # Удаление и создание таблиц
-            # drop_table(conn, cur)
-            # create_table(conn, cur)
+            # drop_table(cur)
+            # create_table(cur)
             #
             # # Проверка работы функции add_new_client
             # add_new_client(cur, 'Иван', 'Иванов', 'ivan@mail.ru')
@@ -225,30 +219,62 @@ if __name__ == '__main__':
             # add_phone_number(cur, 6, '600')
             #
             # # Проверка работы функции change_client
-            # change_client(conn, cur, 1, 'Иван1', 'Иванов1', 'ivan@mail.ru1')
-            # change_client(conn, cur, 1, 'Иван1', 'Иванов1', 'petr@mail.ru')
-            # change_client(conn, cur, 6, 'Иван1', 'Иванов1', 'ivan@mail.ru1')
-            # change_client(conn, cur, 6, 'Иван1', 'Иванов1', 'ivan@mail.ru11')
-            # change_client(conn, cur, 1, 'Иван', 'Иванов', 'ivan@mail.ru', '700', 3)
-            # change_client(conn, cur, 2, 'Петр1', 'Петров1', 'petr@mail.ru1', '700', 1)
+            # change_client(cur, 1, 'Иван1', 'Иванов1', 'ivan@mail.ru1')
+            # change_client(cur, 1, 'Иван1', 'Иванов1', 'petr@mail.ru')
+            # change_client(cur, 6, 'Иван1', 'Иванов1', 'ivan@mail.ru1')
+            # change_client(cur, 6, 'Иван1', 'Иванов1', 'ivan@mail.ru11')
+            # change_client(cur, 1, 'Иван', 'Иванов', 'ivan@mail.ru', '700', 3)
+            # change_client(cur, 2, 'Петр1', 'Петров1', 'petr@mail.ru1', '700', 1)
             #
             # # Проверка работы функции delete_phone_number
-            # delete_phone_number(conn, cur, '700')
-            # delete_phone_number(conn, cur, '700')
-            #
+            # delete_phone_number(cur, '700')
+            # delete_phone_number(cur, '700')
+
             # # Проверка работы функции delete_client
-            # delete_client(conn, cur, 2)
-            # delete_client(conn, cur, 2)
+            # delete_client(cur, 2)
+            # delete_client(cur, 2)
             #
             # # Проверка работы функции find_client
-            # find_client(conn, cur, first_name='Соболь')
-            # find_client(conn, cur, first_name='Иван')
-            # find_client(conn, cur, surname='Петров1')
-            # find_client(conn, cur, email='sobol@mail.ru')
-            # find_client(conn, cur, first_name='Иван1')
-            # find_client(conn, cur, phone_number='400')
-            # find_client(conn, cur, phone_number='4000')
+            # find_client(cur, first_name='Соболь')
+            # find_client(cur, first_name='Иван')
+            # find_client(cur, surname='Петров1')
+            # find_client(cur, email='sobol@mail.ru')
+            # find_client(cur, first_name='Иван1')
+            # find_client(cur, phone_number='400')
+            # find_client(cur, phone_number='4000')
+    conn.close()
 
-# Вопросы:
-# 1. Можно ли в функциях drop_table и create_table передавать названия таблиц как параметры функции?
-#       Не смог найти способ в интернете(
+
+
+
+
+# Создание таблиц, где названия - параметры функции ( https://realpython.com/prevent-python-sql-injection/#passing-safe-query-parameters )
+# from psycopg2 import sql
+# def create_table(cursor, table_name1, table_name2):
+#     with psycopg2.connect(database=database, user=user, password=password) as conn:
+        # with conn.cursor() as cur:
+#     table1 = sql.SQL('''
+#         CREATE TABLE IF NOT EXISTS {table_name1} (
+#         client_id  INTEGER      PRIMARY KEY
+#                                GENERATED ALWAYS AS IDENTITY,
+#         first_name VARCHAR(20) NOT NULL,
+#         surname    VARCHAR(30)    NOT NULL,
+#         email      VARCHAR(50)      UNIQUE NOT NULL
+#         )
+#     ''').format(table_name1=sql.Identifier(table_name1))
+#     table2 = sql.SQL('''
+#         CREATE TABLE IF NOT EXISTS {table_name2} (
+#         phone_id     INTEGER     PRIMARY KEY
+#                                  GENERATED ALWAYS AS IDENTITY,
+#         phone_number VARCHAR(12) UNIQUE,
+#         client_id    INTEGER     REFERENCES client_info(client_id)
+#         )
+#     ''').format(table_name2=sql.Identifier(table_name2))
+#     cursor.execute(table1)
+#     cursor.execute(table2)
+#     return print(f'Таблицы {table_name1} и {table_name2} созданы.')
+#
+# table_name1 = 'client_info'
+# table_name2 = 'phone'
+# create_table(cur, table_name1, table_name2)
+#     conn.close()
